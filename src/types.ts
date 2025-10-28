@@ -39,7 +39,7 @@ export type CDPClient = {
   off: (event: string, callback: (data: any) => void) => void;
 };
 
-export type ScreenSetting = {
+export type Device = {
   width: number;
   height: number;
   deviceScaleFactor: number;

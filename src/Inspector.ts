@@ -6,7 +6,7 @@ import {
   CDPNode,
   CDPClient,
   InspectOptions,
-  ScreenSetting,
+  Device,
   RawInspectResult,
   ParsedInspectResult,
   InspectResult,
@@ -477,8 +477,8 @@ export class Inspector extends EventEmitter {
     await this.sendCommand("Overlay.hideHighlight");
   }
 
-  async setScreen(screen: ScreenSetting): Promise<void> {
-    await this.sendCommand("Emulation.setDeviceMetricsOverride", screen);
+  async setDevice(device: Device): Promise<void> {
+    await this.sendCommand("Emulation.setDeviceMetricsOverride", device);
   }
 
   async inspect(
