@@ -46,7 +46,7 @@ Full example:
 
 Sample output for [https://example.com](https://example.com) (formatted):
 
-```json
+```
 Styles:
 {
   "inherited": [],
