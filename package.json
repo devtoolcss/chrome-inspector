@@ -44,7 +44,6 @@
     "@types/chrome": "^0.1.24",
     "@types/jsdom": "^21.1.7",
     "devtools-protocol": "^0.0.1532728",
-    "puppeteer-core": "^24.25.0",
     "typescript": "^5.9.3"
   }
 }
