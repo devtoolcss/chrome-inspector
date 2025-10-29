@@ -73,12 +73,13 @@ export class Inspector extends EventEmitter {
         resolve();
       }, this.eventTimeout);
 
-      let handler;
-      handler = (data: any) => {
+      let handler: (data: { parentId: number; nodes: CDPNode[] }) => void;
+      handler = (data: { parentId: number; nodes: CDPNode[] }) => {
         if (node.nodeId !== data.parentId) return;
         node.children = data.nodes;
         this.offCDP("DOM.setChildNodes", handler);
         clearTimeout(timeoutId);
+        this.emit("DOM.setChildNodes", data);
         resolve();
       };
 
@@ -91,7 +92,7 @@ export class Inspector extends EventEmitter {
     await childrenPromise;
   }
 
-  private emitWarning(w: any) {
+  private emitWarning(w: string) {
     this.emit("warning", w);
   }
 
@@ -381,26 +382,30 @@ export class Inspector extends EventEmitter {
   }
 
   private registerDOMHandlers() {
-    this.onCDP("DOM.attributeModified", (params) => {
-      this.onAttributeModified(params);
-    });
-    this.onCDP("DOM.attributeRemoved", (params) => {
-      this.onAttributeRemoved(params);
-    });
-    this.onCDP("DOM.characterDataModified", (params) => {
-      this.onCharacterDataModified(params);
-    });
-    this.onCDP("DOM.childNodeRemoved", (params) => {
-      this.onChildNodeRemoved(params);
-    });
+    const syncHandlerMap = {
+      "DOM.attributeModified": this.onAttributeModified,
+      "DOM.attributeRemoved": this.onAttributeRemoved,
+      "DOM.characterDataModified": this.onCharacterDataModified,
+      "DOM.childNodeRemoved": this.onChildNodeRemoved,
+    };
+    for (const [event, handler] of Object.entries(syncHandlerMap)) {
+      this.onCDP(event, (params) => {
+        handler.call(this, params);
+        this.emit(event, params); // Emit event here
+      });
+    }
 
-    // async handlers
-    this.onCDP("DOM.childNodeInserted", async (params) => {
-      await this.onChildNodeInserted(params);
-    });
-    this.onCDP("DOM.documentUpdated", async (params) => {
-      await this.onDocumentUpdated();
-    });
+    const asyncHandlerMap = {
+      "DOM.childNodeInserted": this.onChildNodeInserted,
+      "DOM.documentUpdated": this.onDocumentUpdated,
+    };
+
+    for (const [event, handler] of Object.entries(asyncHandlerMap)) {
+      this.onCDP(event, async (params) => {
+        await handler.call(this, params);
+        this.emit(event, params);
+      });
+    }
   }
 
   private async init(): Promise<void> {
