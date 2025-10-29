@@ -38,10 +38,10 @@ export type InspectorOptions = {
 // anytime event fired
 export class Inspector extends EventEmitter {
   // fixed document object reference
-  private documentImpl: DOMImplementation;
-  private eventTimeout: number;
+  protected documentImpl: DOMImplementation;
+  protected eventTimeout: number;
 
-  private document: Document;
+  protected document: Document;
 
   querySelector(selector: string): InspectorElement | null {
     const el = this.document.querySelector(selector);
@@ -54,7 +54,7 @@ export class Inspector extends EventEmitter {
     );
   }
 
-  private idToNode = new Map<number, InspectorNode>();
+  protected idToNode = new Map<number, InspectorNode>();
 
   readonly sendCommand: (method: string, params?: object) => Promise<any>;
 
@@ -65,7 +65,7 @@ export class Inspector extends EventEmitter {
   // describeNode depth -1 is buggy, often return nodeId=0, causing bug
   // devtools use DOM.requestChildNodes and receive the results from DOM.setChildNodes event
   // devtools-frontend just await DOM.requestChildNodes, but for safety we also await the event
-  private async getChildren(node: CDPNode): Promise<void> {
+  protected async getChildren(node: CDPNode): Promise<void> {
     const childrenPromise = new Promise<void>((resolve) => {
       // if no children to request, also good
       const timeoutId = setTimeout(() => {
@@ -92,11 +92,11 @@ export class Inspector extends EventEmitter {
     await childrenPromise;
   }
 
-  private emitWarning(w: string) {
+  protected emitWarning(w: string) {
     this.emit("warning", w);
   }
 
-  private constructor(
+  protected constructor(
     sendCommand: (method: string, params?: any) => Promise<any>,
     onCDP: (event: string, callback: (data: any) => void) => void,
     offCDP: (event: string, callback: (data: any) => void) => void,
@@ -169,11 +169,11 @@ export class Inspector extends EventEmitter {
   }
 
   // centralized map operations
-  private setMap(nodeId: number, node: InspectorNode): void {
+  protected setMap(nodeId: number, node: InspectorNode): void {
     this.idToNode.set(nodeId, node);
   }
 
-  private deleteMap(nodeId: number, recursive: boolean = true): void {
+  protected deleteMap(nodeId: number, recursive: boolean = true): void {
     const node = this.idToNode.get(nodeId);
     if (!node) {
       this.emitWarning(`deleteMap: no node for nodeId ${nodeId}`);
@@ -188,7 +188,7 @@ export class Inspector extends EventEmitter {
     }
   }
 
-  private buildNodeTree(cdpNode: CDPNode): Node | null {
+  protected buildNodeTree(cdpNode: CDPNode): Node | null {
     let docNode: Node;
 
     switch (cdpNode.nodeType) {
@@ -243,7 +243,7 @@ export class Inspector extends EventEmitter {
     return docNode;
   }
 
-  private onAttributeModified(params: {
+  protected onAttributeModified(params: {
     nodeId: number;
     name: string;
     value: string;
@@ -265,7 +265,7 @@ export class Inspector extends EventEmitter {
     (docNode as Element).setAttribute(params.name, params.value);
   }
 
-  private onAttributeRemoved(params: { nodeId: number; name: string }) {
+  protected onAttributeRemoved(params: { nodeId: number; name: string }) {
     const node = this.idToNode.get(params.nodeId);
     if (!node) {
       this.emitWarning(
@@ -282,7 +282,7 @@ export class Inspector extends EventEmitter {
     (docNode as Element).removeAttribute(params.name);
   }
 
-  private onCharacterDataModified(params: {
+  protected onCharacterDataModified(params: {
     nodeId: number;
     characterData: string;
   }) {
@@ -298,7 +298,7 @@ export class Inspector extends EventEmitter {
     docNode.nodeValue = params.characterData;
   }
 
-  private async onChildNodeInserted(params: {
+  protected async onChildNodeInserted(params: {
     parentNodeId: number;
     previousNodeId: number;
     node: CDPNode;
@@ -353,7 +353,10 @@ export class Inspector extends EventEmitter {
     }
   }
 
-  private onChildNodeRemoved(params: { parentNodeId: number; nodeId: number }) {
+  protected onChildNodeRemoved(params: {
+    parentNodeId: number;
+    nodeId: number;
+  }) {
     const node = this.idToNode.get(params.parentNodeId);
     if (!node) {
       this.emitWarning(
@@ -374,11 +377,11 @@ export class Inspector extends EventEmitter {
     }
   }
 
-  private async onDocumentUpdated(): Promise<void> {
+  protected async onDocumentUpdated(): Promise<void> {
     await this.initDOM();
   }
 
-  private registerDOMHandlers() {
+  protected registerDOMHandlers() {
     const syncHandlerMap = {
       "DOM.attributeModified": this.onAttributeModified,
       "DOM.attributeRemoved": this.onAttributeRemoved,
@@ -405,14 +408,14 @@ export class Inspector extends EventEmitter {
     }
   }
 
-  private async init(): Promise<void> {
+  protected async init(): Promise<void> {
     await this.sendCommand("DOM.enable");
     await this.sendCommand("CSS.enable");
     await this.sendCommand("Overlay.enable"); // somehow have to enable to use
     this.registerDOMHandlers();
   }
 
-  private async initDOM(): Promise<void> {
+  protected async initDOM(): Promise<void> {
     this.idToNode.clear();
     const { root } = await this.sendCommand("DOM.getDocument", {
       depth: 0,
@@ -446,7 +449,7 @@ export class Inspector extends EventEmitter {
 
   // Assume operations needing objectId not care performance much
   // so internally getObjectId each time
-  private async getObjectId(nodeId: number): Promise<string> {
+  protected async getObjectId(nodeId: number): Promise<string> {
     const { object } = await this.sendCommand("DOM.resolveNode", {
       nodeId,
     });
