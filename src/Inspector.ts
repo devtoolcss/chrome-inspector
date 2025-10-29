@@ -1,6 +1,6 @@
 import { parseGetMatchedStylesForNodeResponse } from "@devtoolcss/parser";
 import { CDPNodeType } from "./constants.js";
-import { ElementWrapper, NodeWrapper } from "./DOMWrappers.js";
+import { InspectorElement, InspectorNode } from "./DOMWrappers.js";
 import EventEmitter from "./EventEmitter.js";
 import {
   CDPNode,
@@ -43,22 +43,18 @@ export class Inspector extends EventEmitter {
 
   private document: Document;
 
-  querySelector(selector: string): ElementWrapper | null {
+  querySelector(selector: string): InspectorElement | null {
     const el = this.document.querySelector(selector);
-    return el ? ElementWrapper.get(el, this) : null;
+    return el ? InspectorElement.get(el) : null;
   }
 
-  querySelectorAll(selector: string): ElementWrapper[] {
-    return Array.from(this.document.querySelectorAll(selector)).map((el) =>
-      ElementWrapper.get(el, this),
+  querySelectorAll(selector: string): InspectorElement[] {
+    return Array.from(this.document.querySelectorAll(selector)).map(
+      InspectorElement.get,
     );
   }
 
-  private idToNodes = new Map<
-    number,
-    { cdpNode: CDPNode; docNode: NodeWrapper }
-  >();
-  private nodeToId = new Map<NodeWrapper, number>(); // manage removal by events
+  private idToNode = new Map<number, InspectorNode>();
 
   readonly sendCommand: (method: string, params?: object) => Promise<any>;
 
@@ -171,39 +167,37 @@ export class Inspector extends EventEmitter {
     return inspector;
   }
 
-  private setMap(nodeId: number, cdpNode: CDPNode, docNode: NodeWrapper): void {
-    this.idToNodes.set(nodeId, { cdpNode, docNode });
-    this.nodeToId.set(docNode, nodeId);
+  // centralized map operations
+  private setMap(nodeId: number, node: InspectorNode): void {
+    this.idToNode.set(nodeId, node);
   }
 
   private deleteMap(nodeId: number, recursive: boolean = true): void {
-    const nodes = this.idToNodes.get(nodeId);
-    if (!nodes) {
+    const node = this.idToNode.get(nodeId);
+    if (!node) {
       this.emitWarning(`deleteMap: no node for nodeId ${nodeId}`);
       return;
     }
-    const { cdpNode, docNode } = nodes;
-    this.nodeToId.delete(docNode);
-    this.idToNodes.delete(nodeId);
+    this.idToNode.delete(nodeId);
 
-    if (recursive && cdpNode.children) {
-      for (const child of cdpNode.children) {
+    if (recursive && node._cdpNode.children) {
+      for (const child of node._cdpNode.children) {
         this.deleteMap(child.nodeId, true);
       }
     }
   }
 
-  private buildDocNode(cdpNode: CDPNode): Node | null {
-    let node: Node;
+  private buildNodeTree(cdpNode: CDPNode): Node | null {
+    let docNode: Node;
 
     switch (cdpNode.nodeType) {
       case CDPNodeType.ELEMENT_NODE:
         // iframe is safe because no children (not setting pierce)
-        node = this.document.createElement(cdpNode.localName);
+        docNode = this.document.createElement(cdpNode.localName);
 
         if (Array.isArray(cdpNode.attributes)) {
           for (let i = 0; i < cdpNode.attributes.length; i += 2) {
-            (node as HTMLElement).setAttribute(
+            (docNode as HTMLElement).setAttribute(
               cdpNode.attributes[i],
               cdpNode.attributes[i + 1],
             );
@@ -212,17 +206,17 @@ export class Inspector extends EventEmitter {
         break;
 
       case CDPNodeType.TEXT_NODE:
-        node = this.document.createTextNode(cdpNode.nodeValue || "");
+        docNode = this.document.createTextNode(cdpNode.nodeValue || "");
         break;
 
       case CDPNodeType.COMMENT_NODE:
-        node = this.document.createComment(cdpNode.nodeValue || "");
+        docNode = this.document.createComment(cdpNode.nodeValue || "");
         break;
 
       case CDPNodeType.DOCUMENT_NODE:
         this.document = this.documentImpl.createHTMLDocument();
         this.document.removeChild(this.document.documentElement);
-        node = this.document;
+        docNode = this.document;
         break;
 
       default:
@@ -232,19 +226,20 @@ export class Inspector extends EventEmitter {
     // Recursively add children
     if (cdpNode.children) {
       for (const child of cdpNode.children) {
-        const childNode = this.buildDocNode(child);
-        if (childNode) node.appendChild(childNode);
+        const childNode = this.buildNodeTree(child);
+        if (childNode) docNode.appendChild(childNode);
       }
     }
 
-    const wrappedNode =
-      node.nodeType === CDPNodeType.ELEMENT_NODE ||
-      node.nodeType === CDPNodeType.DOCUMENT_NODE
-        ? ElementWrapper.get(node as Element, this)
-        : NodeWrapper.get(node, this);
-    this.setMap(cdpNode.nodeId, cdpNode, wrappedNode);
+    // The only place to new InspectorNode/Element
+    const node =
+      docNode.nodeType === CDPNodeType.ELEMENT_NODE ||
+      docNode.nodeType === CDPNodeType.DOCUMENT_NODE
+        ? new InspectorElement(docNode as Element, cdpNode, this)
+        : new InspectorNode(docNode, cdpNode, this);
+    this.setMap(cdpNode.nodeId, node);
 
-    return node;
+    return docNode;
   }
 
   private onAttributeModified(params: {
@@ -252,54 +247,54 @@ export class Inspector extends EventEmitter {
     name: string;
     value: string;
   }) {
-    const nodes = this.idToNodes.get(params.nodeId);
-    if (!nodes) {
+    const node = this.idToNode.get(params.nodeId);
+    if (!node) {
       this.emitWarning(
         `onAttributeModified: no node for nodeId ${params.nodeId}`,
       );
       return;
     }
-    const { cdpNode, docNode } = nodes;
+    const { _cdpNode: cdpNode, _docNode: docNode } = node;
     const attrIndex = cdpNode.attributes.indexOf(params.name);
     if (attrIndex !== -1) {
       cdpNode.attributes[attrIndex + 1] = params.value;
     } else {
       cdpNode.attributes.push(params.name, params.value);
     }
-    (docNode.node as Element).setAttribute(params.name, params.value);
+    (docNode as Element).setAttribute(params.name, params.value);
   }
 
   private onAttributeRemoved(params: { nodeId: number; name: string }) {
-    const nodes = this.idToNodes.get(params.nodeId);
-    if (!nodes) {
+    const node = this.idToNode.get(params.nodeId);
+    if (!node) {
       this.emitWarning(
         `onAttributeRemoved: no node for nodeId ${params.nodeId}`,
       );
       return;
     }
-    const { cdpNode, docNode } = nodes;
+    const { _cdpNode: cdpNode, _docNode: docNode } = node;
     // .attributes should always there, the optional is because only Element has attributes
     const attrIndex = cdpNode.attributes.indexOf(params.name);
     if (attrIndex !== -1) {
       cdpNode.attributes.splice(attrIndex, 2);
     }
-    (docNode.node as Element).removeAttribute(params.name);
+    (docNode as Element).removeAttribute(params.name);
   }
 
   private onCharacterDataModified(params: {
     nodeId: number;
     characterData: string;
   }) {
-    const nodes = this.idToNodes.get(params.nodeId);
-    if (!nodes) {
+    const node = this.idToNode.get(params.nodeId);
+    if (!node) {
       this.emitWarning(
         `onCharacterDataModified: no node for nodeId ${params.nodeId}`,
       );
       return;
     }
-    const { cdpNode, docNode } = nodes;
+    const { _cdpNode: cdpNode, _docNode: docNode } = node;
     cdpNode.nodeValue = params.characterData;
-    docNode.node.nodeValue = params.characterData;
+    docNode.nodeValue = params.characterData;
   }
 
   private async onChildNodeInserted(params: {
@@ -307,14 +302,14 @@ export class Inspector extends EventEmitter {
     previousNodeId: number;
     node: CDPNode;
   }): Promise<void> {
-    const nodes = this.idToNodes.get(params.parentNodeId);
-    if (!nodes) {
+    const node = this.idToNode.get(params.parentNodeId);
+    if (!node) {
       this.emitWarning(
         `onChildNodeInserted: no node for nodeId ${params.parentNodeId}`,
       );
       return;
     }
-    const { cdpNode: parentCdpNode, docNode: parentDocNode } = nodes;
+    const { _cdpNode: cdpNode, _docNode: docNode } = node;
     // Get cdpNode children if needed
     //
     // We always maintain full tree, so unlike devtool we request children here.
@@ -340,20 +335,19 @@ export class Inspector extends EventEmitter {
       await this.getChildren(childCdpNode);
     }
 
-    // build docNode
-    const childDocNode = this.buildDocNode(childCdpNode);
+    const childDocNode = this.buildNodeTree(childCdpNode);
 
     const prevIdx =
       params.previousNodeId === 0
         ? -1
-        : findNodeIdx(parentCdpNode.children, params.previousNodeId);
+        : findNodeIdx(cdpNode.children, params.previousNodeId);
     if (prevIdx !== null) {
       // insert cdpNode
-      parentCdpNode.children.splice(prevIdx + 1, 0, params.node);
+      cdpNode.children.splice(prevIdx + 1, 0, params.node);
 
       // insert docNode
-      const referenceNode = parentDocNode.node.childNodes[prevIdx + 1] || null; // null for append
-      parentDocNode.node.insertBefore(childDocNode, referenceNode);
+      const referenceNode = docNode.childNodes[prevIdx + 1] || null; // null for append
+      docNode.insertBefore(childDocNode, referenceNode);
     } else {
       this.emitWarning(
         `onChildNodeInserted: no previous node for nodeId ${params.previousNodeId}`,
@@ -362,20 +356,19 @@ export class Inspector extends EventEmitter {
   }
 
   private onChildNodeRemoved(params: { parentNodeId: number; nodeId: number }) {
-    const nodes = this.idToNodes.get(params.parentNodeId);
-    if (!nodes) {
+    const node = this.idToNode.get(params.parentNodeId);
+    if (!node) {
       this.emitWarning(
         `onChildNodeRemoved: no node for nodeId ${params.parentNodeId}`,
       );
       return;
     }
-    const { cdpNode: parentCdpNode, docNode: parentDocNode } = nodes;
+    const { _cdpNode: parentCdpNode, _docNode: parentDocNode } = node;
     const idx = findNodeIdx(parentCdpNode.children, params.nodeId);
     if (idx !== null) {
-      parentCdpNode.children.splice(idx, 1);
       this.deleteMap(params.nodeId);
-
-      parentDocNode.node.removeChild(parentDocNode.node.childNodes[idx]);
+      parentCdpNode.children.splice(idx, 1);
+      parentDocNode.removeChild(parentDocNode.childNodes[idx]);
     } else {
       this.emitWarning(
         `onChildNodeRemoved: no child node for nodeId ${params.nodeId}`,
@@ -418,8 +411,7 @@ export class Inspector extends EventEmitter {
   }
 
   private async initDOM(): Promise<void> {
-    this.idToNodes.clear();
-    this.nodeToId.clear();
+    this.idToNode.clear();
     const { root } = await this.sendCommand("DOM.getDocument", {
       depth: 0,
     });
@@ -427,29 +419,19 @@ export class Inspector extends EventEmitter {
     // https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/web_tests/inspector-protocol/dom/dom-mutationEvents.js;l=62;drc=ef646bf22edb325602a0ad200f2f4382cf1b3e08
     // but just in case we keep it.
     await this.getChildren(root);
-    this.buildDocNode(root);
+    this.buildNodeTree(root);
   }
 
-  // Up to date CDPNode (DOM.Node) reference with complete child tree
-  getCdpNode(node: NodeWrapper): Readonly<CDPNode> | undefined {
-    // maybe the Map should be nodeToCdpNode directly?
-    // Though most just need nodeId. Anyway the performance difference is minor
-    const nodeId = this.nodeToId.get(node);
-    if (nodeId === undefined) return undefined;
-    const nodes = this.idToNodes.get(nodeId);
-    return nodes ? nodes.cdpNode : undefined;
-  }
-
-  getDocNodeById(nodeId: number): Readonly<NodeWrapper> | undefined {
-    const nodes = this.idToNodes.get(nodeId);
-    return nodes ? nodes.docNode : undefined;
+  getNodeById(nodeId: number): Readonly<InspectorNode> | undefined {
+    const node = this.idToNode.get(nodeId);
+    return node;
   }
 
   async forcePseudoState(
-    node: NodeWrapper,
+    node: InspectorNode,
     pseudoClasses: string[],
   ): Promise<void> {
-    const nodeId = this.nodeToId.get(node);
+    const nodeId = node._cdpNode.nodeId;
     if (!nodeId) {
       throw new Error("Element not found in the inspector's document.");
     }
@@ -472,8 +454,8 @@ export class Inspector extends EventEmitter {
     return object.objectId;
   }
 
-  async highlightNode(node: NodeWrapper): Promise<void> {
-    const nodeId = this.nodeToId.get(node);
+  async highlightNode(node: InspectorNode): Promise<void> {
+    const nodeId = node._cdpNode.nodeId;
     if (!nodeId) {
       throw new Error("Element not found in the inspector's document.");
     }
@@ -495,21 +477,21 @@ export class Inspector extends EventEmitter {
   }
 
   async inspect(
-    element: ElementWrapper,
+    element: InspectorElement,
     options: InspectOptions & { raw: true },
   ): Promise<RawInspectResult>;
   async inspect(
-    element: ElementWrapper,
+    element: InspectorElement,
     options?: InspectOptions & { raw?: false },
   ): Promise<ParsedInspectResult>;
 
   async inspect(
-    element: ElementWrapper, // only allow Element, which have styles
+    element: InspectorElement, // only allow Element, which have styles
     options: InspectOptions = {},
   ): Promise<InspectResult> {
     const { raw = false, exclude = {}, parseOptions = {} } = options;
 
-    const nodeId = this.nodeToId.get(element);
+    const nodeId = element._cdpNode.nodeId;
 
     if (nodeId === undefined) {
       throw new Error("Element not found in the inspector's document.");

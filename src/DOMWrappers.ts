@@ -1,35 +1,46 @@
-import type { Inspector } from "./Inspector.js";
+import { Inspector } from "./Inspector.js";
+import type { CDPNode } from "./types.js";
 
-export class NodeWrapper {
-  protected static wrapperCache = new WeakMap<Node, NodeWrapper>();
+export class InspectorNode {
+  protected static nodeMap = new WeakMap<Node, InspectorNode>();
 
-  readonly node: Node;
+  readonly _docNode: Node;
+  readonly _cdpNode: CDPNode;
   protected inspector: Inspector;
   protected objectId?: string | null;
 
-  static get(node: Node, inspector: Inspector): NodeWrapper {
-    const cached = NodeWrapper.wrapperCache.get(node);
-    if (cached) return cached;
-    const wrapper = new NodeWrapper(node, inspector);
-    NodeWrapper.wrapperCache.set(node, wrapper);
-    return wrapper;
+  // User has to be sure about whether the InspectorNode has been created or not
+  static get(node: Node): InspectorNode {
+    const cached = InspectorNode.nodeMap.get(node);
+    if (!cached) {
+      throw Error("InspectorNode not found");
+    }
+    return cached;
   }
 
-  protected constructor(node: Node, inspector: Inspector) {
-    this.node = node;
+  constructor(docNode: Node, cdpNode: CDPNode, inspector: Inspector) {
+    this._docNode = docNode;
+    this._cdpNode = cdpNode;
     this.inspector = inspector;
+    InspectorNode.nodeMap.set(docNode, this);
   }
+
+  protected alive(): boolean {
+    // check if the node is still tracked by inspector
+    const node = this.inspector.getNodeById(this._cdpNode.nodeId);
+    return node === this;
+  }
+
   protected async callFunctionOn(args: any[], functionDeclaration: string) {
     // always do live check first
-    const cdpNode = this.inspector.getCdpNode(this);
-    if (!cdpNode) {
+    if (!this.alive()) {
       throw new Error("Node is not tracked in the inspector");
     }
 
     if (!this.objectId) {
       // Get the remote object ID for this node
       const { object } = await this.inspector.sendCommand("DOM.resolveNode", {
-        nodeId: cdpNode.nodeId,
+        nodeId: this._cdpNode.nodeId,
       });
       this.objectId = object.objectId;
     }
@@ -56,59 +67,57 @@ export class NodeWrapper {
   }
 
   get nodeType() {
-    return this.node.nodeType;
+    return this._docNode.nodeType;
   }
 
   get nodeName() {
-    return this.node.nodeName;
+    return this._docNode.nodeName;
   }
 
   get nodeValue() {
-    return this.node.nodeValue;
+    return this._docNode.nodeValue;
   }
 
   get textContent(): string | null {
-    return this.node.textContent;
+    return this._docNode.textContent;
   }
 
-  get parentNode(): NodeWrapper | null {
-    return this.node.parentNode
-      ? new NodeWrapper(this.node.parentNode, this.inspector)
+  get parentNode(): InspectorNode | null {
+    return this._docNode.parentNode
+      ? InspectorNode.get(this._docNode.parentNode)
       : null;
   }
 
-  get childNodes(): NodeWrapper[] {
-    return Array.from(this.node.childNodes).map(
-      (child) => new NodeWrapper(child, this.inspector),
-    );
+  get childNodes(): InspectorNode[] {
+    return Array.from(this._docNode.childNodes).map(InspectorNode.get);
   }
 
-  get firstChild(): NodeWrapper | null {
-    return this.node.firstChild
-      ? new NodeWrapper(this.node.firstChild, this.inspector)
+  get firstChild(): InspectorNode | null {
+    return this._docNode.firstChild
+      ? InspectorNode.get(this._docNode.firstChild)
       : null;
   }
 
-  get lastChild(): NodeWrapper | null {
-    return this.node.lastChild
-      ? new NodeWrapper(this.node.lastChild, this.inspector)
+  get lastChild(): InspectorNode | null {
+    return this._docNode.lastChild
+      ? InspectorNode.get(this._docNode.lastChild)
       : null;
   }
 
-  get nextSibling(): NodeWrapper | null {
-    return this.node.nextSibling
-      ? new NodeWrapper(this.node.nextSibling, this.inspector)
+  get nextSibling(): InspectorNode | null {
+    return this._docNode.nextSibling
+      ? InspectorNode.get(this._docNode.nextSibling)
       : null;
   }
 
-  get previousSibling(): NodeWrapper | null {
-    return this.node.previousSibling
-      ? new NodeWrapper(this.node.previousSibling, this.inspector)
+  get previousSibling(): InspectorNode | null {
+    return this._docNode.previousSibling
+      ? InspectorNode.get(this._docNode.previousSibling)
       : null;
   }
 
-  contains(other: NodeWrapper): boolean {
-    return this.node.contains(other.node);
+  contains(other: InspectorNode): boolean {
+    return this._docNode.contains(other._docNode);
   }
 
   // runtime methods (experimental, limited support)
@@ -127,21 +136,21 @@ export class NodeWrapper {
   }
 }
 
-export class ElementWrapper extends NodeWrapper {
+export class InspectorElement extends InspectorNode {
   get element(): Element {
-    return this.node as Element;
+    return this._docNode as Element;
   }
 
-  static get(element: Element, inspector: Inspector): ElementWrapper {
-    const cached = ElementWrapper.wrapperCache.get(element) as ElementWrapper;
-    if (cached) return cached;
-    const wrapper = new ElementWrapper(element, inspector);
-    ElementWrapper.wrapperCache.set(element, wrapper);
-    return wrapper;
+  static get(element: Element): InspectorElement {
+    const cached = InspectorElement.nodeMap.get(element);
+    if (!cached) {
+      throw Error("InspectorNode not found");
+    }
+    return cached as InspectorElement;
   }
 
-  protected constructor(element: Element, inspector: Inspector) {
-    super(element, inspector);
+  constructor(element: Element, cdpNode: CDPNode, inspector: Inspector) {
+    super(element, cdpNode, inspector);
   }
 
   get tagName() {
@@ -156,10 +165,8 @@ export class ElementWrapper extends NodeWrapper {
     return this.element.className;
   }
 
-  get children(): ElementWrapper[] {
-    return Array.from(this.element.children).map(
-      (child) => new ElementWrapper(child, this.inspector),
-    );
+  get children(): InspectorElement[] {
+    return Array.from(this.element.children).map(InspectorElement.get);
   }
 
   get attributes(): NamedNodeMap {
@@ -170,14 +177,14 @@ export class ElementWrapper extends NodeWrapper {
     return this.element.classList;
   }
 
-  querySelector(selector: string): ElementWrapper | null {
+  querySelector(selector: string): InspectorElement | null {
     const el = this.element.querySelector(selector);
-    return el ? new ElementWrapper(el, this.inspector) : null;
+    return el ? InspectorElement.get(el) : null;
   }
 
-  querySelectorAll(selector: string): ElementWrapper[] {
+  querySelectorAll(selector: string): InspectorElement[] {
     return Array.from(this.element.querySelectorAll(selector)).map(
-      (el) => new ElementWrapper(el, this.inspector),
+      InspectorElement.get,
     );
   }
 
@@ -193,70 +200,70 @@ export class ElementWrapper extends NodeWrapper {
     return this.element.outerHTML;
   }
 
-  get parentNode(): NodeWrapper | null {
+  get parentNode(): InspectorNode | null {
     const parent = this.element.parentNode;
     if (!parent) return null;
     return parent instanceof Element
-      ? new ElementWrapper(parent, this.inspector)
-      : new NodeWrapper(parent, this.inspector);
+      ? InspectorElement.get(parent)
+      : InspectorNode.get(parent);
   }
 
-  get parentElement(): ElementWrapper | null {
+  get parentElement(): InspectorElement | null {
     return this.element.parentElement
-      ? new ElementWrapper(this.element.parentElement, this.inspector)
+      ? InspectorElement.get(this.element.parentElement)
       : null;
   }
 
-  get nextSibling(): NodeWrapper | null {
+  get nextSibling(): InspectorNode | null {
     const next = this.element.nextSibling;
     if (!next) return null;
     return next instanceof Element
-      ? new ElementWrapper(next, this.inspector)
-      : new NodeWrapper(next, this.inspector);
+      ? InspectorElement.get(next)
+      : InspectorNode.get(next);
   }
 
-  get nextElementSibling(): ElementWrapper | null {
+  get nextElementSibling(): InspectorElement | null {
     return this.element.nextElementSibling
-      ? new ElementWrapper(this.element.nextElementSibling, this.inspector)
+      ? InspectorElement.get(this.element.nextElementSibling)
       : null;
   }
 
-  get previousSibling(): NodeWrapper | null {
+  get previousSibling(): InspectorNode | null {
     const prev = this.element.previousSibling;
     if (!prev) return null;
     return prev instanceof Element
-      ? new ElementWrapper(prev, this.inspector)
-      : new NodeWrapper(prev, this.inspector);
+      ? InspectorElement.get(prev)
+      : InspectorNode.get(prev);
   }
 
-  get previousElementSibling(): ElementWrapper | null {
+  get previousElementSibling(): InspectorElement | null {
     return this.element.previousElementSibling
-      ? new ElementWrapper(this.element.previousElementSibling, this.inspector)
+      ? InspectorElement.get(this.element.previousElementSibling)
       : null;
   }
 
-  get childNodes(): NodeWrapper[] {
+  get childNodes(): InspectorNode[] {
     return Array.from(this.element.childNodes).map((child) =>
       child instanceof Element
-        ? new ElementWrapper(child, this.inspector)
-        : new NodeWrapper(child, this.inspector),
+        ? InspectorElement.get(child)
+        : InspectorNode.get(child),
     );
   }
 
-  get firstChild(): NodeWrapper | null {
+  get firstChild(): InspectorNode | null {
     const first = this.element.firstChild;
     if (!first) return null;
     return first instanceof Element
-      ? new ElementWrapper(first, this.inspector)
-      : new NodeWrapper(first, this.inspector);
+      ? InspectorElement.get(first)
+      : InspectorNode.get(first);
   }
 
-  get lastChild(): NodeWrapper | null {
+  get lastChild(): InspectorNode | null {
     const last = this.element.lastChild;
     if (!last) return null;
     return last instanceof Element
-      ? new ElementWrapper(last, this.inspector)
-      : new NodeWrapper(last, this.inspector);
+      ? InspectorElement.get(last)
+      : InspectorNode.get(last);
   }
 
   getAttribute(name: string) {
@@ -267,9 +274,9 @@ export class ElementWrapper extends NodeWrapper {
     return this.element.matches(selector);
   }
 
-  closest(selector: string): ElementWrapper | null {
+  closest(selector: string): InspectorElement | null {
     const el = this.element.closest(selector);
-    return el ? new ElementWrapper(el, this.inspector) : null;
+    return el ? InspectorElement.get(el) : null;
   }
 
   // runtime methods (experimental, limited support)
