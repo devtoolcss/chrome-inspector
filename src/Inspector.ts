@@ -1,6 +1,6 @@
 import { parseGetMatchedStylesForNodeResponse } from "@devtoolcss/parser";
 import { CDPNodeType } from "./constants.js";
-import { InspectorElement, InspectorNode } from "./DOMWrappers.js";
+import { InspectorElement, InspectorNode } from "./InspectorDOM.js";
 import EventEmitter from "./EventEmitter.js";
 import {
   CDPNode,
