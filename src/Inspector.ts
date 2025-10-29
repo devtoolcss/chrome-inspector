@@ -29,10 +29,18 @@ function findNodeIdx(nodes: CDPNode[], nodeId: number): number {
   return null;
 }
 
+export type InspectorOptions = {
+  documentImpl?: DOMImplementation;
+  eventTimeout?: number;
+};
+
 // we need EventEmitter for warning events, which can happen
 // anytime event fired
 export class Inspector extends EventEmitter {
   // fixed document object reference
+  private documentImpl: DOMImplementation;
+  private eventTimeout: number;
+
   private document: Document;
 
   querySelector(selector: string): ElementWrapper | null {
@@ -67,7 +75,7 @@ export class Inspector extends EventEmitter {
       const timeoutId = setTimeout(() => {
         this.offCDP("DOM.setChildNodes", handler);
         resolve();
-      }, 500);
+      }, this.eventTimeout);
 
       let handler;
       handler = (data: any) => {
@@ -95,21 +103,26 @@ export class Inspector extends EventEmitter {
     sendCommand: (method: string, params?: any) => Promise<any>,
     onCDP: (event: string, callback: (data: any) => void) => void,
     offCDP: (event: string, callback: (data: any) => void) => void,
-    document: Document = JSDOM
-      ? new JSDOM("<!DOCTYPE html>").window.document
-      : window.document,
+    options: InspectorOptions = {},
   ) {
     super();
-    // source document for calling .implementation.createHTMLDocument()
-    this.document = document.implementation.createHTMLDocument();
     this.sendCommand = sendCommand;
     this.onCDP = onCDP;
     this.offCDP = offCDP;
+
+    if (options.documentImpl) {
+      this.documentImpl = options.documentImpl;
+    } else {
+      this.documentImpl = JSDOM
+        ? new JSDOM("<!DOCTYPE html>").window.document.implementation
+        : window.document.implementation;
+    }
+    this.eventTimeout = options.eventTimeout || 100;
   }
 
   static async fromCDPClient(
     client: CDPClient,
-    documentImpl?: Document,
+    options: InspectorOptions,
   ): Promise<Inspector> {
     const sendCommand = (method: string, params?: any) =>
       client.send(method, params);
@@ -118,7 +131,7 @@ export class Inspector extends EventEmitter {
     const offCDP = (event: string, callback: (data: any) => void) =>
       client.off(event, callback);
 
-    const inspector = new Inspector(sendCommand, onCDP, offCDP, documentImpl);
+    const inspector = new Inspector(sendCommand, onCDP, offCDP, options);
     await inspector.init();
     await inspector.initDOM();
     return inspector;
@@ -127,7 +140,7 @@ export class Inspector extends EventEmitter {
   static async fromChromeDebugger(
     chromeDebugger: typeof chrome.debugger,
     tabId: number,
-    documentImpl?: Document,
+    options: InspectorOptions,
   ): Promise<Inspector> {
     const sendCommand = async (method: string, params?: any) =>
       chromeDebugger.sendCommand({ tabId }, method, params);
@@ -152,7 +165,7 @@ export class Inspector extends EventEmitter {
         listenerMap.delete(callback);
       }
     };
-    const inspector = new Inspector(sendCommand, onCDP, offCDP, documentImpl);
+    const inspector = new Inspector(sendCommand, onCDP, offCDP, options);
     await inspector.init();
     await inspector.initDOM();
     return inspector;
@@ -207,7 +220,7 @@ export class Inspector extends EventEmitter {
         break;
 
       case CDPNodeType.DOCUMENT_NODE:
-        this.document = this.document.implementation.createHTMLDocument();
+        this.document = this.documentImpl.createHTMLDocument();
         this.document.removeChild(this.document.documentElement);
         node = this.document;
         break;
