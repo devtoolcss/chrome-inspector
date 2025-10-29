@@ -490,15 +490,15 @@ export class Inspector extends EventEmitter {
   }
 
   async forcePseudoState(
-    node: InspectorNode,
+    element: InspectorElement,
     pseudoClasses: string[],
   ): Promise<void> {
-    if (!node.tracked) {
+    if (!element.tracked) {
       throw new Error("Element not tracked by the inspector.");
     }
 
     await this.sendCommand("CSS.forcePseudoState", {
-      nodeId: node._cdpNode.nodeId,
+      nodeId: element._cdpNode.nodeId,
       forcedPseudoClasses: pseudoClasses,
     });
   }
