@@ -1,5 +1,4 @@
 import type { ParseOptions, ParsedCSS } from "@devtoolcss/parser";
-import type { Inspector } from "./Inspector.js";
 
 // version independent types for CDP data
 export type GetMatchedStylesForNodeResponse = {
@@ -17,6 +16,7 @@ export type GetMatchedStylesForNodeResponse = {
   cssFontPaletteValuesRule?: any;
   parentLayoutNodeId?: number;
   cssFunctionRules?: any[];
+  [key: string]: any; // Allow any other properties
 };
 
 export type CDPNode = {
