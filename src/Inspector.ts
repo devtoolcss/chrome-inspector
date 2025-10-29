@@ -320,9 +320,6 @@ export class Inspector extends EventEmitter {
     // The node from insert event may or maynot have children initialized,
     // hoping not partially initialized (say only one level).
     //
-    // Since we update much later, node inserted and later removed won't get response.
-    // This will be handled by getChildren's timeout.
-    //
     // Node with only a #text child (ex: h1) won't get response.
     // DevTool UI also expand the #text as the same level.
     // Seems childNodeInserted will handle this by selective providing children.
