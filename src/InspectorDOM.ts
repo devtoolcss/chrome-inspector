@@ -25,7 +25,7 @@ export class InspectorNode {
     InspectorNode.nodeMap.set(docNode, this);
   }
 
-  protected alive(): boolean {
+  get tracked(): boolean {
     // check if the node is still tracked by inspector
     const node = this.inspector.getNodeById(this._cdpNode.nodeId);
     return node === this;
@@ -33,7 +33,7 @@ export class InspectorNode {
 
   protected async callFunctionOn(args: any[], functionDeclaration: string) {
     // always do live check first
-    if (!this.alive()) {
+    if (!this.tracked) {
       throw new Error("Node is not tracked in the inspector");
     }
 
