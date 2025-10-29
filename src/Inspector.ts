@@ -467,29 +467,14 @@ export class Inspector extends EventEmitter {
     });
   }
 
-  // Assume operations needing objectId not care performance much
-  // so internally getObjectId each time
-  protected async getObjectId(nodeId: number): Promise<string> {
-    const { object } = await this.sendCommand("DOM.resolveNode", {
-      nodeId,
-    });
-    if (!object.objectId) {
-      throw new Error("Failed to resolve nodeId to objectId.");
-    }
-    return object.objectId;
-  }
-
   async highlightNode(node: InspectorNode): Promise<void> {
     const nodeId = node._cdpNode.nodeId;
     if (!nodeId) {
       throw new Error("Element not found in the inspector's document.");
     }
-
-    const objectId = await this.getObjectId(nodeId);
-
     await this.sendCommand("Overlay.highlightNode", {
       highlightConfig,
-      objectId,
+      nodeId,
     });
   }
 
