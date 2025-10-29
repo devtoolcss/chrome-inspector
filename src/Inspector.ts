@@ -38,12 +38,12 @@ type InspectorOptions = {
   eventTimeout?: number;
 };
 
-type MatchedStylesOptions = {
+export type MatchedStylesOptions = {
   raw?: boolean;
   parseOptions?: ParseOptions;
 };
 
-type ComputedStyleOptions = {
+export type ComputedStyleOptions = {
   raw?: boolean;
 };
 
@@ -505,15 +505,6 @@ export class Inspector extends EventEmitter {
 
   async getMatchedStyles(
     element: InspectorElement,
-    options: MatchedStylesOptions & { raw: true },
-  ): Promise<GetMatchedStylesForNodeResponse>;
-  async getMatchedStyles(
-    element: InspectorElement,
-    options?: MatchedStylesOptions & { raw?: false },
-  ): Promise<ParsedCSS>;
-
-  async getMatchedStyles(
-    element: InspectorElement,
     options: MatchedStylesOptions = {},
   ): Promise<GetMatchedStylesForNodeResponse | ParsedCSS> {
     const { raw = false, parseOptions = {} } = options;
@@ -531,15 +522,6 @@ export class Inspector extends EventEmitter {
 
     return raw ? ret : parseGetMatchedStylesForNodeResponse(ret, parseOptions);
   }
-
-  async getComputedStyle(
-    element: InspectorElement,
-    options: ComputedStyleOptions & { raw: true },
-  ): Promise<GetComputedStyleForNodeResponse>;
-  async getComputedStyle(
-    element: InspectorElement,
-    options?: ComputedStyleOptions & { raw?: false },
-  ): Promise<Record<string, string>>;
 
   async getComputedStyle(
     element: InspectorElement,

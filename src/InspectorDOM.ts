@@ -1,5 +1,14 @@
-import { Inspector } from "./Inspector.js";
-import type { CDPNode } from "./types.js";
+import type {
+  Inspector,
+  MatchedStylesOptions,
+  ComputedStyleOptions,
+} from "./Inspector.js";
+import type { ParsedCSS } from "@devtoolcss/parser";
+import type {
+  GetMatchedStylesForNodeResponse,
+  GetComputedStyleForNodeResponse,
+  CDPNode,
+} from "./types.js";
 
 export class InspectorNode {
   protected static nodeMap = new WeakMap<Node, InspectorNode>();
@@ -133,6 +142,22 @@ export class InspectorNode {
    */
   async remove(): Promise<void> {
     await this.callFunctionOn([], "function() { this.remove(); }");
+  }
+
+  // CDP extra
+
+  /**
+   * @experimental
+   */
+  async highlight(): Promise<void> {
+    await this.inspector.highlightNode(this);
+  }
+
+  /**
+   * @experimental
+   */
+  async hideHighlight(): Promise<void> {
+    await this.inspector.hideHighlight(this);
   }
 }
 
@@ -293,5 +318,32 @@ export class InspectorElement extends InspectorNode {
    */
   async click(): Promise<void> {
     await this.callFunctionOn([], "function() { this.click(); }");
+  }
+
+  // CDP extra
+
+  /**
+   * @experimental
+   */
+  async forcePseudoState(pseudoClasses: string[]): Promise<void> {
+    await this.inspector.forcePseudoState(this, pseudoClasses);
+  }
+
+  /**
+   * @experimental
+   */
+  async getMatchedStyles(
+    options: MatchedStylesOptions = {},
+  ): Promise<GetMatchedStylesForNodeResponse | ParsedCSS> {
+    return await this.inspector.getMatchedStyles(this, options);
+  }
+
+  /**
+   * @experimental
+   */
+  async getComputedStyle(
+    options: ComputedStyleOptions = {},
+  ): Promise<Record<string, string> | GetComputedStyleForNodeResponse> {
+    return await this.inspector.getComputedStyle(this, options);
   }
 }
