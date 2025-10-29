@@ -130,6 +130,8 @@ export class Inspector extends EventEmitter {
     this.eventTimeout = options.eventTimeout || 100;
   }
 
+  // factory methods
+
   static async fromCDPClient(
     client: CDPClient,
     options: InspectorOptions,
@@ -440,10 +442,33 @@ export class Inspector extends EventEmitter {
     this.buildNodeTree(root);
   }
 
-  // for checking node tracked
+  // for checking node tracked only
   _getNodeByNodeId(nodeId: number): Readonly<InspectorNode> | undefined {
     const node = this.idToNode.get(nodeId);
     return node;
+  }
+
+  // inspector-wise operations
+
+  async setDevice(device: Device): Promise<void> {
+    await this.sendCommand("Emulation.setDeviceMetricsOverride", device);
+  }
+
+  async hideHighlight(): Promise<void> {
+    await this.sendCommand("Overlay.hideHighlight");
+  }
+
+  // node-wise operations
+
+  async highlightNode(node: InspectorNode): Promise<void> {
+    if (!node.tracked) {
+      throw new Error("Element not tracked by the inspector.");
+    }
+
+    await this.sendCommand("Overlay.highlightNode", {
+      highlightConfig,
+      nodeId: node._cdpNode.nodeId,
+    });
   }
 
   async forcePseudoState(
@@ -458,25 +483,6 @@ export class Inspector extends EventEmitter {
       nodeId: node._cdpNode.nodeId,
       forcedPseudoClasses: pseudoClasses,
     });
-  }
-
-  async highlightNode(node: InspectorNode): Promise<void> {
-    if (!node.tracked) {
-      throw new Error("Element not tracked by the inspector.");
-    }
-
-    await this.sendCommand("Overlay.highlightNode", {
-      highlightConfig,
-      nodeId: node._cdpNode.nodeId,
-    });
-  }
-
-  async hideHighlight(): Promise<void> {
-    await this.sendCommand("Overlay.hideHighlight");
-  }
-
-  async setDevice(device: Device): Promise<void> {
-    await this.sendCommand("Emulation.setDeviceMetricsOverride", device);
   }
 
   async getMatchedStyles(
