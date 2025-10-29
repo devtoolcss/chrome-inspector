@@ -3,7 +3,12 @@ import { CDPNodeType } from "./constants.js";
 import { InspectorElement, InspectorNode } from "./InspectorDOM.js";
 import EventEmitter from "./EventEmitter.js";
 import type { ParseOptions, ParsedCSS } from "@devtoolcss/parser";
-import { CDPNode, Device, GetMatchedStylesForNodeResponse } from "./types.js";
+import {
+  CDPNode,
+  Device,
+  GetComputedStyleForNodeResponse,
+  GetMatchedStylesForNodeResponse,
+} from "./types.js";
 import highlightConfig from "./highlightConfig.js";
 
 let JSDOM: any = null;
@@ -33,26 +38,14 @@ type InspectorOptions = {
   eventTimeout?: number;
 };
 
-type InspectOptions = {
-  exclude?: {
-    computed?: boolean;
-    styles?: boolean;
-  };
+type MatchedStylesOptions = {
   raw?: boolean;
   parseOptions?: ParseOptions;
 };
 
-type ParsedInspectResult = {
-  styles?: ParsedCSS;
-  computed?: object;
+type ComputedStyleOptions = {
+  raw?: boolean;
 };
-
-type RawInspectResult = {
-  styles?: GetMatchedStylesForNodeResponse;
-  computed?: { name: string; value: string }[];
-};
-
-type InspectResult = ParsedInspectResult | RawInspectResult;
 
 // we need EventEmitter for warning events, which can happen
 // anytime event fired
@@ -486,56 +479,72 @@ export class Inspector extends EventEmitter {
     await this.sendCommand("Emulation.setDeviceMetricsOverride", device);
   }
 
-  async inspect(
+  async getMatchedStyles(
     element: InspectorElement,
-    options: InspectOptions & { raw: true },
-  ): Promise<RawInspectResult>;
-  async inspect(
+    options: MatchedStylesOptions & { raw: true },
+  ): Promise<GetMatchedStylesForNodeResponse>;
+  async getMatchedStyles(
     element: InspectorElement,
-    options?: InspectOptions & { raw?: false },
-  ): Promise<ParsedInspectResult>;
+    options?: MatchedStylesOptions & { raw?: false },
+  ): Promise<ParsedCSS>;
 
-  async inspect(
-    element: InspectorElement, // only allow Element, which have styles
-    options: InspectOptions = {},
-  ): Promise<InspectResult> {
-    const { raw = false, exclude = {}, parseOptions = {} } = options;
+  async getMatchedStyles(
+    element: InspectorElement,
+    options: MatchedStylesOptions = {},
+  ): Promise<GetMatchedStylesForNodeResponse | ParsedCSS> {
+    const { raw = false, parseOptions = {} } = options;
 
-    const nodeId = element._cdpNode.nodeId;
-
-    if (nodeId === undefined) {
-      throw new Error("Element not found in the inspector's document.");
+    if (!element.tracked) {
+      throw new Error("Element not tracked by the inspector.");
     }
 
-    const ret = {} as InspectResult;
+    const ret: GetMatchedStylesForNodeResponse = await this.sendCommand(
+      "CSS.getMatchedStylesForNode",
+      {
+        nodeId: element._cdpNode.nodeId,
+      },
+    );
 
-    if (!exclude.styles) {
-      const styles = await this.sendCommand("CSS.getMatchedStylesForNode", {
-        nodeId,
-      });
-      ret.styles = raw
-        ? styles
-        : parseGetMatchedStylesForNodeResponse(styles, parseOptions);
+    return raw ? ret : parseGetMatchedStylesForNodeResponse(ret, parseOptions);
+  }
+
+  async getComputedStyle(
+    element: InspectorElement,
+    options: ComputedStyleOptions & { raw: true },
+  ): Promise<GetComputedStyleForNodeResponse>;
+  async getComputedStyle(
+    element: InspectorElement,
+    options?: ComputedStyleOptions & { raw?: false },
+  ): Promise<Record<string, string>>;
+
+  async getComputedStyle(
+    element: InspectorElement,
+    options: ComputedStyleOptions = {},
+  ): Promise<Record<string, string> | GetComputedStyleForNodeResponse> {
+    const { raw = false } = options;
+
+    if (!element.tracked) {
+      throw new Error("Element not tracked by the inspector.");
     }
 
-    if (!exclude.computed) {
-      const { computedStyle } = await this.sendCommand(
-        "CSS.getComputedStyleForNode",
-        { nodeId },
-      );
-      ret.computed = raw
-        ? computedStyle
-        : computedStyle.reduce(
-            (
-              obj: Record<string, string>,
-              item: { name: string; value: string },
-            ) => {
-              obj[item.name] = item.value;
-              return obj;
-            },
-            {},
-          );
-    }
-    return ret;
+    const ret: GetComputedStyleForNodeResponse = await this.sendCommand(
+      "CSS.getComputedStyleForNode",
+      {
+        nodeId: element._cdpNode.nodeId,
+      },
+    );
+
+    return raw
+      ? ret
+      : ret.computedStyle.reduce(
+          (
+            obj: Record<string, string>,
+            item: { name: string; value: string },
+          ) => {
+            obj[item.name] = item.value;
+            return obj;
+          },
+          {},
+        );
   }
 }

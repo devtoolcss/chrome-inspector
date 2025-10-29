@@ -17,6 +17,11 @@ export type GetMatchedStylesForNodeResponse = {
   [key: string]: any; // Allow any other properties
 };
 
+export type GetComputedStyleForNodeResponse = {
+  computedStyle: Record<string, string>[];
+  extraFields: Object;
+};
+
 export type CDPNode = {
   nodeId: number;
   nodeType: number;
