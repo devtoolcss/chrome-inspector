@@ -450,25 +450,24 @@ export class Inspector extends EventEmitter {
     node: InspectorNode,
     pseudoClasses: string[],
   ): Promise<void> {
-    const nodeId = node._cdpNode.nodeId;
-    if (!nodeId) {
-      throw new Error("Element not found in the inspector's document.");
+    if (!node.tracked) {
+      throw new Error("Element not tracked by the inspector.");
     }
 
     await this.sendCommand("CSS.forcePseudoState", {
-      nodeId,
+      nodeId: node._cdpNode.nodeId,
       forcedPseudoClasses: pseudoClasses,
     });
   }
 
   async highlightNode(node: InspectorNode): Promise<void> {
-    const nodeId = node._cdpNode.nodeId;
-    if (!nodeId) {
-      throw new Error("Element not found in the inspector's document.");
+    if (!node.tracked) {
+      throw new Error("Element not tracked by the inspector.");
     }
+
     await this.sendCommand("Overlay.highlightNode", {
       highlightConfig,
-      nodeId,
+      nodeId: node._cdpNode.nodeId,
     });
   }
 
