@@ -2,15 +2,8 @@ import { parseGetMatchedStylesForNodeResponse } from "@devtoolcss/parser";
 import { CDPNodeType } from "./constants.js";
 import { InspectorElement, InspectorNode } from "./InspectorDOM.js";
 import EventEmitter from "./EventEmitter.js";
-import {
-  CDPNode,
-  CDPClient,
-  InspectOptions,
-  Device,
-  RawInspectResult,
-  ParsedInspectResult,
-  InspectResult,
-} from "./types.js";
+import type { ParseOptions, ParsedCSS } from "@devtoolcss/parser";
+import { CDPNode, Device, GetMatchedStylesForNodeResponse } from "./types.js";
 import highlightConfig from "./highlightConfig.js";
 
 let JSDOM: any = null;
@@ -29,10 +22,37 @@ function findNodeIdx(nodes: CDPNode[], nodeId: number): number {
   return null;
 }
 
-export type InspectorOptions = {
+type CDPClient = {
+  send: (method: string, params?: object) => Promise<any>;
+  on: (event: string, callback: (data: any) => void) => void;
+  off: (event: string, callback: (data: any) => void) => void;
+};
+
+type InspectorOptions = {
   documentImpl?: DOMImplementation;
   eventTimeout?: number;
 };
+
+type InspectOptions = {
+  exclude?: {
+    computed?: boolean;
+    styles?: boolean;
+  };
+  raw?: boolean;
+  parseOptions?: ParseOptions;
+};
+
+type ParsedInspectResult = {
+  styles?: ParsedCSS;
+  computed?: object;
+};
+
+type RawInspectResult = {
+  styles?: GetMatchedStylesForNodeResponse;
+  computed?: { name: string; value: string }[];
+};
+
+type InspectResult = ParsedInspectResult | RawInspectResult;
 
 // we need EventEmitter for warning events, which can happen
 // anytime event fired
