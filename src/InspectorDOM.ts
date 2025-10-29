@@ -27,7 +27,7 @@ export class InspectorNode {
 
   get tracked(): boolean {
     // check if the node is still tracked by inspector
-    const node = this.inspector.getNodeById(this._cdpNode.nodeId);
+    const node = this.inspector._getNodeByNodeId(this._cdpNode.nodeId);
     return node === this;
   }
 
