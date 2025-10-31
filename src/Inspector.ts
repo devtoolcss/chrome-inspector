@@ -115,8 +115,6 @@ export class Inspector extends EventEmitter {
 
   protected idToNode = new Map<number, InspectorNode>();
 
-  protected highlightedNodes = new Set<InspectorNode>();
-
   readonly sendCommand: (method: string, params?: object) => Promise<any>;
 
   readonly onCDP: (event: string, callback: (data: any) => void) => void;
@@ -517,8 +515,13 @@ export class Inspector extends EventEmitter {
     await this.sendCommand("Emulation.setDeviceMetricsOverride", device);
   }
 
+  async hideHighlight(): Promise<void> {
+    await this.sendCommand("Overlay.hideHighlight");
+  }
+
   // node-wise operations
 
+  // can only have one highlighted node at a time
   async highlightNode(node: InspectorNode): Promise<void> {
     if (!node.tracked) {
       throw new Error("Element not tracked by the inspector.");
@@ -528,26 +531,6 @@ export class Inspector extends EventEmitter {
       highlightConfig,
       nodeId: node._cdpNode.nodeId,
     });
-
-    // Track highlighted
-    this.highlightedNodes.add(node);
-  }
-
-  async hideHighlight(node?: InspectorNode): Promise<void> {
-    if (node) {
-      this.highlightedNodes.delete(node);
-      this.highlightedNodes = new Set(
-        Array.from(this.highlightedNodes).filter((n) => n !== node),
-      );
-    } else {
-      this.highlightedNodes.clear();
-    }
-    await this.sendCommand("Overlay.hideHighlight");
-
-    // re-highlight remaining nodes
-    await Promise.all(
-      Array.from(this.highlightedNodes).map((n) => this.highlightNode(n)),
-    );
   }
 
   async forcePseudoState(

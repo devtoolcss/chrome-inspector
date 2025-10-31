@@ -148,16 +148,10 @@ export class InspectorNode {
 
   /**
    * @experimental
+   * To hide, use inspector.hideHighlight()
    */
   async highlight(): Promise<void> {
     await this.inspector.highlightNode(this);
-  }
-
-  /**
-   * @experimental
-   */
-  async hideHighlight(): Promise<void> {
-    await this.inspector.hideHighlight(this);
   }
 }
 
