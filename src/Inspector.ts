@@ -47,6 +47,14 @@ export type ComputedStyleOptions = {
   raw?: boolean;
 };
 
+function nsResolver(prefix) {
+  const ns = {
+    svg: "http://www.w3.org/2000/svg",
+    xhtml: "http://www.w3.org/1999/xhtml",
+  };
+  return ns[prefix] || null;
+}
+
 // we need EventEmitter for warning events, which can happen
 // anytime event fired
 export class Inspector extends EventEmitter {
@@ -55,6 +63,11 @@ export class Inspector extends EventEmitter {
   protected eventTimeout: number;
 
   protected document: Document;
+
+  protected selectedNode: InspectorNode | undefined;
+  get $0(): InspectorNode | undefined {
+    return this.selectedNode;
+  }
 
   querySelector(selector: string): InspectorElement | null {
     const el = this.document.querySelector(selector);
@@ -65,6 +78,39 @@ export class Inspector extends EventEmitter {
     return Array.from(this.document.querySelectorAll(selector)).map(
       InspectorElement.get,
     );
+  }
+
+  queryXPath(xpath: string): InspectorNode | null {
+    const result = this.document.evaluate(
+      xpath,
+      this.document,
+      nsResolver,
+      9, //XPathResult.FIRST_ORDERED_NODE_TYPE
+      null,
+    );
+    const node = result.singleNodeValue;
+    return node ? InspectorNode.get(node) : null;
+  }
+
+  queryXPathAll(xpath: string): InspectorNode[] {
+    const result = this.document.evaluate(
+      xpath,
+      this.document,
+      nsResolver,
+      7, //XPathResult.ORDERED_NODE_SNAPSHOT_TYPE
+      null,
+    );
+    const nodes: InspectorNode[] = [];
+    for (let i = 0; i < result.snapshotLength; i++) {
+      const node = result.snapshotItem(i);
+      if (node) {
+        const inspectorNode = InspectorNode.get(node);
+        if (inspectorNode) {
+          nodes.push(inspectorNode);
+        }
+      }
+    }
+    return nodes;
   }
 
   protected idToNode = new Map<number, InspectorNode>();
@@ -425,11 +471,26 @@ export class Inspector extends EventEmitter {
     }
   }
 
+  protected async registerBinding() {
+    // add binding for sync $0
+    await this.sendCommand("Runtime.addBinding", {
+      name: "__chrome_inspector_send_$0_xpath",
+    });
+    this.onCDP(
+      "Runtime.bindingCalled",
+      (params: { name: string; payload: string }) => {
+        this.selectedNode = this.queryXPath(params.payload) || undefined;
+      },
+    );
+  }
+
   protected async init(): Promise<void> {
     await this.sendCommand("DOM.enable");
     await this.sendCommand("CSS.enable");
     await this.sendCommand("Overlay.enable"); // somehow have to enable to use
+    await this.sendCommand("Runtime.enable");
     this.registerDOMHandlers();
+    await this.registerBinding();
   }
 
   protected async initDOM(): Promise<void> {
