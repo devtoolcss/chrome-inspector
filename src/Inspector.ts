@@ -494,12 +494,13 @@ export class Inspector extends EventEmitter {
   protected async initDOM(): Promise<void> {
     this.idToNode.clear();
     const { root } = await this.sendCommand("DOM.getDocument", {
-      depth: 0,
+      depth: -1,
     });
     // Use depth: -1 is probably safe, as tested in
     // https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/web_tests/inspector-protocol/dom/dom-mutationEvents.js;l=62;drc=ef646bf22edb325602a0ad200f2f4382cf1b3e08
-    // but just in case we keep it.
-    await this.getChildren(root);
+    // Use -1 because it handles refresh better.
+
+    // await this.getChildren(root);
     this.buildNodeTree(root);
   }
 
