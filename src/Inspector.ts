@@ -66,7 +66,10 @@ export class Inspector extends EventEmitter {
 
   protected selectedNode: InspectorNode | undefined;
   get $0(): InspectorNode | undefined {
-    return this.selectedNode;
+    if (this.selectedNode && this.selectedNode.tracked) {
+      return this.selectedNode;
+    }
+    return undefined;
   }
 
   querySelector(selector: string): InspectorElement | null {
