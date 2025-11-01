@@ -1,8 +1,8 @@
 # Chrome Inspector
 
-A programming interface that makes DevTools automation simple. It use Chrome DevTools Protocol (CDP), the same API Chrome DevTools use, to provide Elements and Styles Panel information and more.
+A programming interface that makes DevTools automation simple. It uses the Chrome DevTools Protocol (CDP) — the same API that Chrome DevTools uses — to provide access to Elements and Styles panel information, and more.
 
-Basically it works by maintaining a DOM mirror for the inspected page and wraps boilerplate CDP calls to methods of DOM Node and Elements. The goal is to be a lightweight version of [devtools-frontend's sdk](https://github.com/ChromeDevTools/devtools-frontend/tree/main/front_end/core/sdk).
+It works by maintaining a DOM mirror of the inspected page and wrapping the boilerplate CDP calls into convenient methods for DOM nodes and elements. The goal is to offer a lightweight alternative to [devtools-frontend's sdk](https://github.com/ChromeDevTools/devtools-frontend/tree/main/front_end/core/sdk).
 
 ## Installation
 
