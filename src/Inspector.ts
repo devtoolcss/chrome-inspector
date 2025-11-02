@@ -507,8 +507,9 @@ export class Inspector extends EventEmitter {
     this.buildNodeTree(root);
   }
 
-  // for checking node tracked only
-  _getNodeByNodeId(nodeId: number): Readonly<InspectorNode> | undefined {
+  // mainly for checking node tracked
+  // also useful for mapping manually requested NodeId to InspectorNode
+  getNodeByNodeId(nodeId: number): InspectorNode | undefined {
     const node = this.idToNode.get(nodeId);
     return node;
   }
