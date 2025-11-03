@@ -58,8 +58,7 @@ function nsResolver(prefix) {
 // we need EventEmitter for warning events, which can happen
 // anytime event fired
 export class Inspector extends EventEmitter {
-  // fixed document object reference
-  protected documentImpl: DOMImplementation;
+  readonly documentImpl: DOMImplementation;
   protected eventTimeout: number;
 
   protected document: Document;
