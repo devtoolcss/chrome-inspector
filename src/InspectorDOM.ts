@@ -15,8 +15,8 @@ export class InspectorNode {
 
   readonly _docNode: Node;
   readonly _cdpNode: CDPNode;
-  protected inspector: Inspector;
-  protected objectId?: string | null;
+  inspector: Inspector;
+  objectId?: string | null;
 
   // User has to be sure about whether the InspectorNode has been created or not
   static get(node: Node): InspectorNode {
