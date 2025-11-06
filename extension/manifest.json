@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Chrome Inspector $0 Sync",
+  "name": "Chrome Inspector Sync",
   "version": "0.0.1",
-  "description": "Syncs the selected element's information with the Chrome Inspector.",
+  "description": "Syncs Chrome DevTools' information with the Chrome Inspector. Currently just $0",
   "devtools_page": "devtools.html"
 }
