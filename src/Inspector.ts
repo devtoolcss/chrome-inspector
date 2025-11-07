@@ -64,6 +64,10 @@ export class Inspector extends EventEmitter {
   protected document: Document;
 
   protected selectedNode: InspectorNode | undefined;
+
+  /**
+   * @experimental
+   */
   get $0(): InspectorNode | undefined {
     if (this.selectedNode && this.selectedNode.tracked) {
       return this.selectedNode;
