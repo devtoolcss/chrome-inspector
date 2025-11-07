@@ -33,7 +33,7 @@
   },
   "module": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node ./scripts/copy-ext-no-icon.js",
     "prepare": "pnpm build"
   },
   "dependencies": {
