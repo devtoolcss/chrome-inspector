@@ -60,7 +60,7 @@ for (const key of ["background-color", "width", "margin-left"]) {
   console.log(`${key}:`, computed[key]);
 }
 
-// Read elements like in browser
+// Read elements in DOM syntax
 const bodyHtml = body.outerHTML;
 const html = body.parentNode;
 const h1 = body.querySelector("h1");
@@ -74,3 +74,25 @@ console.log(body.tracked); // false
 ```
 
 See `examples/` for full scripts.
+
+## Sync $0 (experimental)
+
+To use `inspector.$0`, install the extension in [./extension](./extension)`. Also avaliable on [chrome web store](https://chromewebstore.google.com/detail/chrome-inspector-sync/jgiapjeogionjfbonpiamipcedcnohha).
+
+The extension is included in the package. Import `CHROME_INSPECTOR_SYNC_EXTENSION_PATH` to get its path. This is useful for automation frameworks like Puppeteer or Playwright to launch with extensions.
+
+## TODO
+
+1. CSS properties add/edit
+   - Key CDP commands: `CSS.addRule`, `CSS.setStyleSheetText`, `CSS.getStyleSheetText`
+   - Use raw response's [StyleSheetId](https://chromedevtools.github.io/devtools-protocol/tot/CSS/#type-StyleSheetId) and [SourceRange](https://chromedevtools.github.io/devtools-protocol/tot/CSS/#type-SourceRange)
+2. Better DOM mutation API support
+   - Many setters like `.outerHTML = ...` cannot be async. Possibly have to be `setOuterHTML()`?
+3. Shadow DOM support
+4. Other debugging utilities (ex: console message as event, DOM breakpoint, etc)
+
+## Contributing
+
+We welcome contributions in any form, including bug reports, pull requests, feature requests, and more.
+
+For pull requests, please use [conventional commits](https://conventionalcommits.org/).
