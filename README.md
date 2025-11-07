@@ -4,6 +4,10 @@ A programming interface that makes DevTools automation simple. It uses the Chrom
 
 It works by maintaining a DOM mirror of the inspected page and wrapping the boilerplate CDP calls into convenient methods for DOM nodes and elements. The goal is to offer a lightweight alternative to [devtools-frontend's sdk](https://github.com/ChromeDevTools/devtools-frontend/tree/main/front_end/core/sdk).
 
+## Demo
+
+https://github.com/user-attachments/assets/8bc057d4-ffbc-4654-a1e9-472a021fcbe1
+
 ## Installation
 
 ```bash
