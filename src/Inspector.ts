@@ -14,8 +14,8 @@ import highlightConfig from "./highlightConfig.js";
 let JSDOM: any = null;
 
 if (typeof window === "undefined") {
-  const s = "jsdom"; // somehow have to do this to avoid bundler issue
-  JSDOM = (await import(s)).JSDOM;
+  const pkgs = typeof window === "undefined" ? ["jsdom"] : [];
+  JSDOM = (await import(pkgs[0])).JSDOM;
 }
 
 function findNodeIdx(nodes: CDPNode[], nodeId: number): number {

@@ -1,10 +1,10 @@
 let CHROME_INSPECTOR_SYNC_EXTENSION_PATH: string | undefined;
 
+const pkgs = typeof window === "undefined" ? ["url", "path"] : [];
+
 if (typeof window === "undefined") {
-  const u = "url";
-  const { fileURLToPath } = await import(u);
-  const p = "path";
-  const path = await import(p);
+  const { fileURLToPath } = await import(pkgs[0]);
+  const path = await import(pkgs[1]);
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
