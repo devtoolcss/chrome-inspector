@@ -81,7 +81,7 @@ See `examples/` for full scripts.
 
 ## Sync $0 (experimental)
 
-To use `inspector.$0`, install the extension in [./extension](./extension)`. Also avaliable on [chrome web store](https://chromewebstore.google.com/detail/chrome-inspector-sync/jgiapjeogionjfbonpiamipcedcnohha).
+To use `inspector.$0`, install the extension in [./extension](./extension). Also avaliable on [chrome web store](https://chromewebstore.google.com/detail/chrome-inspector-sync/jgiapjeogionjfbonpiamipcedcnohha).
 
 The extension is included in the package. Import `CHROME_INSPECTOR_SYNC_EXTENSION_PATH` to get its path. This is useful for automation frameworks like Puppeteer or Playwright to launch with extensions.
 
