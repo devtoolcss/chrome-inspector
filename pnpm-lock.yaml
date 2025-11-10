@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@devtoolcss/parser':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^1.0.1
+        version: 1.0.1
       jsdom:
         specifier: ^27.0.1
         version: 27.0.1(postcss@8.5.6)
@@ -73,8 +73,8 @@ packages:
     resolution: {integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==}
     engines: {node: '>=18'}
 
-  '@devtoolcss/parser@1.0.0':
-    resolution: {integrity: sha512-kvJhIT7fUjJ/pY0//hESS3LOEin4FI2gc51aD102c7PjbwsWQdboAhU55+QCc8HxEunwEP/zS9M/TdiG3r7yFA==}
+  '@devtoolcss/parser@1.0.1':
+    resolution: {integrity: sha512-XtSIgT9OVJLL4jpJ2bk+d2TXk87P8oDo7IdV4BuyQIBa+xvj73BUzOn6sl9VPCk1d146indN3pcjYjg9SSBIbQ==}
 
   '@types/chrome@0.1.27':
     resolution: {integrity: sha512-pkkCb0Ft8X+Igi751POzT+YqchSxUCtB6s4Gs6ttgSj8qzJga/qlJMgSW1mKxuQTW4i0sTqQbqVtzXDS5AU+4A==}
@@ -322,7 +322,7 @@ snapshots:
 
   '@csstools/css-tokenizer@3.0.4': {}
 
-  '@devtoolcss/parser@1.0.0': {}
+  '@devtoolcss/parser@1.0.1': {}
 
   '@types/chrome@0.1.27':
     dependencies:

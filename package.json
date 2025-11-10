@@ -1,6 +1,6 @@
 {
   "name": "chrome-inspector",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A lightweight interface for Chrome Inspector, providing Elements and Styles Panel information via the Chrome DevTools Protocol (CDP). Supports Puppeteer, Playwright, Chrome Extensions, and other CDP clients.",
   "license": "MIT",
   "files": [
@@ -37,7 +37,7 @@
     "prepare": "pnpm build"
   },
   "dependencies": {
-    "@devtoolcss/parser": "^1.0.0",
+    "@devtoolcss/parser": "^1.0.1",
     "jsdom": "^27.0.1"
   },
   "devDependencies": {
