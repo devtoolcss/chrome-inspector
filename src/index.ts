@@ -1,5 +1,5 @@
-export * from "./Inspector.js";
-export * from "./constants.js";
-export * from "./types.js";
-export * from "./InspectorDOM.js";
+export * from "./index.shared.js";
+
+// node specific
 export * from "./extensionPath.js";
+export { NodeInspector as Inspector } from "./NodeInspector.js";

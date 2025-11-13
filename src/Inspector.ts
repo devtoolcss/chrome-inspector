@@ -11,13 +11,6 @@ import {
 } from "./types.js";
 import highlightConfig from "./highlightConfig.js";
 
-let JSDOM: any = null;
-
-if (typeof window === "undefined") {
-  const pkgs = typeof window === "undefined" ? ["jsdom"] : [];
-  JSDOM = (await import(pkgs[0])).JSDOM;
-}
-
 function findNodeIdx(nodes: CDPNode[], nodeId: number): number {
   for (let i = 0; i < nodes.length; i++) {
     if (nodes[i].nodeId === nodeId) {
@@ -27,13 +20,13 @@ function findNodeIdx(nodes: CDPNode[], nodeId: number): number {
   return null;
 }
 
-type CDPClient = {
+export type CDPClient = {
   send: (method: string, params?: object) => Promise<any>;
   on: (event: string, callback: (data: any) => void) => void;
   off: (event: string, callback: (data: any) => void) => void;
 };
 
-type InspectorOptions = {
+export type InspectorOptions = {
   documentImpl?: DOMImplementation;
   eventTimeout?: number;
 };
@@ -174,10 +167,12 @@ export class Inspector extends EventEmitter {
 
     if (options.documentImpl) {
       this.documentImpl = options.documentImpl;
+    } else if (window?.document?.implementation) {
+      this.documentImpl = window.document.implementation;
     } else {
-      this.documentImpl = JSDOM
-        ? new JSDOM("<!DOCTYPE html>").window.document.implementation
-        : window.document.implementation;
+      throw new Error(
+        "No window.document.implementation. documentImpl must be provided in your environment.",
+      );
     }
     this.eventTimeout = options.eventTimeout || 100;
   }
