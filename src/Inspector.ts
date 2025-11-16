@@ -1,6 +1,10 @@
 import { parseGetMatchedStylesForNodeResponse } from "@devtoolcss/parser";
 import { CDPNodeType } from "./constants.js";
-import { InspectorElement, InspectorNode } from "./InspectorDOM.js";
+import {
+  InspectorNode,
+  InspectorElement,
+  InspectorDocument,
+} from "./InspectorDOM.js";
 import EventEmitter from "./EventEmitter.js";
 import type { ParseOptions, ParsedCSS } from "@devtoolcss/parser";
 import {
@@ -40,23 +44,19 @@ export type ComputedStyleOptions = {
   raw?: boolean;
 };
 
-function nsResolver(prefix) {
-  const ns = {
-    svg: "http://www.w3.org/2000/svg",
-    xhtml: "http://www.w3.org/1999/xhtml",
-  };
-  return ns[prefix] || null;
-}
-
 // we need EventEmitter for warning events, which can happen
 // anytime event fired
 export class Inspector extends EventEmitter {
   readonly documentImpl: DOMImplementation;
   protected eventTimeout: number;
 
-  protected document: Document;
+  protected RootDocument: Document;
 
   protected selectedNode: InspectorNode | undefined;
+
+  get document(): InspectorDocument {
+    return InspectorDocument.get(this.RootDocument);
+  }
 
   /**
    * @experimental
@@ -68,48 +68,22 @@ export class Inspector extends EventEmitter {
     return undefined;
   }
 
+  /* legacy forwardings */
+
   querySelector(selector: string): InspectorElement | null {
-    const el = this.document.querySelector(selector);
-    return el ? InspectorElement.get(el) : null;
+    return this.document.querySelector(selector);
   }
 
   querySelectorAll(selector: string): InspectorElement[] {
-    return Array.from(this.document.querySelectorAll(selector)).map(
-      InspectorElement.get,
-    );
+    return this.document.querySelectorAll(selector);
   }
 
   queryXPath(xpath: string): InspectorNode | null {
-    const result = this.document.evaluate(
-      xpath,
-      this.document,
-      nsResolver,
-      9, //XPathResult.FIRST_ORDERED_NODE_TYPE
-      null,
-    );
-    const node = result.singleNodeValue;
-    return node ? InspectorNode.get(node) : null;
+    return this.document.queryXPath(xpath);
   }
 
   queryXPathAll(xpath: string): InspectorNode[] {
-    const result = this.document.evaluate(
-      xpath,
-      this.document,
-      nsResolver,
-      7, //XPathResult.ORDERED_NODE_SNAPSHOT_TYPE
-      null,
-    );
-    const nodes: InspectorNode[] = [];
-    for (let i = 0; i < result.snapshotLength; i++) {
-      const node = result.snapshotItem(i);
-      if (node) {
-        const inspectorNode = InspectorNode.get(node);
-        if (inspectorNode) {
-          nodes.push(inspectorNode);
-        }
-      }
-    }
-    return nodes;
+    return this.document.queryXPathAll(xpath);
   }
 
   protected idToNode = new Map<number, InspectorNode>();
@@ -256,7 +230,7 @@ export class Inspector extends EventEmitter {
     switch (cdpNode.nodeType) {
       case CDPNodeType.ELEMENT_NODE:
         // iframe is safe because no children (not setting pierce)
-        docNode = this.document.createElement(cdpNode.localName);
+        docNode = this.RootDocument.createElement(cdpNode.localName);
 
         if (Array.isArray(cdpNode.attributes)) {
           for (let i = 0; i < cdpNode.attributes.length; i += 2) {
@@ -269,17 +243,17 @@ export class Inspector extends EventEmitter {
         break;
 
       case CDPNodeType.TEXT_NODE:
-        docNode = this.document.createTextNode(cdpNode.nodeValue || "");
+        docNode = this.RootDocument.createTextNode(cdpNode.nodeValue || "");
         break;
 
       case CDPNodeType.COMMENT_NODE:
-        docNode = this.document.createComment(cdpNode.nodeValue || "");
+        docNode = this.RootDocument.createComment(cdpNode.nodeValue || "");
         break;
 
       case CDPNodeType.DOCUMENT_NODE:
-        this.document = this.documentImpl.createHTMLDocument();
-        this.document.removeChild(this.document.documentElement);
-        docNode = this.document;
+        this.RootDocument = this.documentImpl.createHTMLDocument();
+        this.RootDocument.removeChild(this.RootDocument.documentElement);
+        docNode = this.RootDocument;
         break;
 
       default:
@@ -294,12 +268,19 @@ export class Inspector extends EventEmitter {
       }
     }
 
-    // The only place to new InspectorNode/Element
-    const node =
-      docNode.nodeType === CDPNodeType.ELEMENT_NODE ||
-      docNode.nodeType === CDPNodeType.DOCUMENT_NODE
-        ? new InspectorElement(docNode as Element, cdpNode, this)
-        : new InspectorNode(docNode, cdpNode, this);
+    // The only place to new InspectorNode/Element/Document
+    let node: InspectorNode;
+    switch (cdpNode.nodeType) {
+      case CDPNodeType.DOCUMENT_NODE:
+        node = new InspectorDocument(docNode as Document, cdpNode, this);
+        (node as InspectorDocument).remove;
+        break;
+      case CDPNodeType.ELEMENT_NODE:
+        node = new InspectorElement(docNode as Element, cdpNode, this);
+        break;
+      default:
+        node = new InspectorNode(docNode, cdpNode, this);
+    }
     this.setMap(cdpNode.nodeId, node);
 
     return docNode;

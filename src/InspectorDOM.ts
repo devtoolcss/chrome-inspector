@@ -163,7 +163,7 @@ export class InspectorElement extends InspectorNode {
   static get(element: Element): InspectorElement {
     const cached = InspectorElement.nodeMap.get(element);
     if (!cached) {
-      throw Error("InspectorNode not found");
+      throw Error("InspectorElement not found");
     }
     return cached as InspectorElement;
   }
@@ -339,5 +339,120 @@ export class InspectorElement extends InspectorNode {
     options: ComputedStyleOptions = {},
   ): Promise<Record<string, string> | GetComputedStyleForNodeResponse> {
     return await this.inspector.getComputedStyle(this, options);
+  }
+}
+
+export class InspectorDocument extends InspectorNode {
+  private get document(): Document {
+    return this._docNode as Document;
+  }
+
+  static get(document: Document): InspectorDocument {
+    const cached = InspectorDocument.nodeMap.get(document);
+    if (!cached) {
+      throw Error("InspectorDocument not found");
+    }
+    return cached as InspectorDocument;
+  }
+
+  constructor(document: Document, cdpNode: CDPNode, inspector: Inspector) {
+    super(document, cdpNode, inspector);
+  }
+
+  protected nsResolver(prefix: string) {
+    const ns = {
+      svg: "http://www.w3.org/2000/svg",
+      xhtml: "http://www.w3.org/1999/xhtml",
+    };
+    return ns[prefix] || null;
+  }
+
+  get body(): InspectorElement | null {
+    return this.document.body ? InspectorElement.get(this.document.body) : null;
+  }
+
+  get head(): InspectorElement | null {
+    return this.document.head ? InspectorElement.get(this.document.head) : null;
+  }
+
+  get documentElement(): InspectorElement | null {
+    return this.document.documentElement
+      ? InspectorElement.get(this.document.documentElement)
+      : null;
+  }
+
+  querySelector(selector: string): InspectorElement | null {
+    const el = this.document.querySelector(selector);
+    return el ? InspectorElement.get(el) : null;
+  }
+
+  querySelectorAll(selector: string): InspectorElement[] {
+    return Array.from(this.document.querySelectorAll(selector)).map(
+      InspectorElement.get,
+    );
+  }
+
+  getElementById(id: string): InspectorElement | null {
+    const el = this.document.getElementById(id);
+    return el ? InspectorElement.get(el) : null;
+  }
+
+  getElementsByClassName(className: string): InspectorElement[] {
+    return Array.from(this.document.getElementsByClassName(className)).map(
+      InspectorElement.get,
+    );
+  }
+
+  getElementsByTagName(tagName: string): InspectorElement[] {
+    return Array.from(this.document.getElementsByTagName(tagName)).map(
+      InspectorElement.get,
+    );
+  }
+
+  /**
+   * @experimental
+   */
+  queryXPath(xpath: string): InspectorNode | null {
+    const result = this.document.evaluate(
+      xpath,
+      this.document,
+      this.nsResolver,
+      9, //XPathResult.FIRST_ORDERED_NODE_TYPE
+      null,
+    );
+    const node = result.singleNodeValue;
+    return node ? InspectorNode.get(node) : null;
+  }
+
+  /**
+   * @experimental
+   */
+  queryXPathAll(xpath: string): InspectorNode[] {
+    const result = this.document.evaluate(
+      xpath,
+      this.document,
+      this.nsResolver,
+      7, //XPathResult.ORDERED_NODE_SNAPSHOT_TYPE
+      null,
+    );
+    const nodes: InspectorNode[] = [];
+    for (let i = 0; i < result.snapshotLength; i++) {
+      const node = result.snapshotItem(i);
+      if (node) {
+        const inspectorNode = InspectorNode.get(node);
+        if (inspectorNode) {
+          nodes.push(inspectorNode);
+        }
+      }
+    }
+    return nodes;
+  }
+
+  /**
+   * @deprecated Use of remove() on the document node is not supported.
+   * To fix, have to distinguish Node and ChildNode, maybe in future major release.
+   */
+  async remove(): Promise<void> {
+    throw new Error("Cannot remove the document node");
   }
 }
