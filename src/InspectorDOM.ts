@@ -156,7 +156,7 @@ export class InspectorNode {
 }
 
 export class InspectorElement extends InspectorNode {
-  get element(): Element {
+  private get element(): Element {
     return this._docNode as Element;
   }
 
