@@ -33,7 +33,7 @@ export type CDPClient = {
 export type InspectorOptions = {
   documentImpl?: DOMImplementation;
   eventTimeout?: number;
-  selectedNodeXPath?: string;
+  $0XPath?: string;
   sync$0Enabled?: boolean;
 };
 
@@ -72,7 +72,7 @@ export class Inspector extends EventEmitter {
     return undefined;
   }
 
-  setSelectedNodeByXPath(xpath: string): void {
+  set$0ByXPath(xpath: string): void {
     this.selectedNode = this.queryXPath(xpath) || undefined;
   }
 
@@ -182,8 +182,8 @@ export class Inspector extends EventEmitter {
     const inspector = new Inspector(sendCommand, onCDP, offCDP, options);
     await inspector.init();
     await inspector.initDOM();
-    if (options.selectedNodeXPath) {
-      inspector.setSelectedNodeByXPath(options.selectedNodeXPath);
+    if (options.$0XPath) {
+      inspector.set$0ByXPath(options.$0XPath);
     }
     return inspector;
   }
@@ -219,6 +219,9 @@ export class Inspector extends EventEmitter {
     const inspector = new Inspector(sendCommand, onCDP, offCDP, options);
     await inspector.init();
     await inspector.initDOM();
+    if (options.$0XPath) {
+      inspector.set$0ByXPath(options.$0XPath);
+    }
     return inspector;
   }
 
@@ -477,7 +480,7 @@ export class Inspector extends EventEmitter {
     this.onCDP(
       "Runtime.bindingCalled",
       (params: { name: string; payload: string }) => {
-        if (this.sync$0Enabled) this.setSelectedNodeByXPath(params.payload);
+        if (this.sync$0Enabled) this.set$0ByXPath(params.payload);
       },
     );
   }
