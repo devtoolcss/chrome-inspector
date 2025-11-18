@@ -33,6 +33,8 @@ export type CDPClient = {
 export type InspectorOptions = {
   documentImpl?: DOMImplementation;
   eventTimeout?: number;
+  selectedNodeXPath?: string;
+  sync$0Enabled?: boolean;
 };
 
 export type MatchedStylesOptions = {
@@ -54,6 +56,8 @@ export class Inspector extends EventEmitter {
 
   protected selectedNode: InspectorNode | undefined;
 
+  protected sync$0Enabled: boolean = true;
+
   get document(): InspectorDocument {
     return InspectorDocument.get(this.RootDocument);
   }
@@ -66,6 +70,14 @@ export class Inspector extends EventEmitter {
       return this.selectedNode;
     }
     return undefined;
+  }
+
+  setSelectedNodeByXPath(xpath: string): void {
+    this.selectedNode = this.queryXPath(xpath) || undefined;
+  }
+
+  toggleSync$0(enable: boolean): void {
+    this.sync$0Enabled = enable;
   }
 
   /* legacy forwardings */
@@ -149,6 +161,9 @@ export class Inspector extends EventEmitter {
       );
     }
     this.eventTimeout = options.eventTimeout || 100;
+    if (options.sync$0Enabled === false) {
+      this.sync$0Enabled = false;
+    }
   }
 
   // factory methods
@@ -167,6 +182,9 @@ export class Inspector extends EventEmitter {
     const inspector = new Inspector(sendCommand, onCDP, offCDP, options);
     await inspector.init();
     await inspector.initDOM();
+    if (options.selectedNodeXPath) {
+      inspector.setSelectedNodeByXPath(options.selectedNodeXPath);
+    }
     return inspector;
   }
 
@@ -459,7 +477,7 @@ export class Inspector extends EventEmitter {
     this.onCDP(
       "Runtime.bindingCalled",
       (params: { name: string; payload: string }) => {
-        this.selectedNode = this.queryXPath(params.payload) || undefined;
+        if (this.sync$0Enabled) this.setSelectedNodeByXPath(params.payload);
       },
     );
   }
