@@ -327,18 +327,30 @@ export class InspectorElement extends InspectorNode {
    * @experimental
    */
   async getMatchedStyles(
+    options: MatchedStylesOptions & { raw: true },
+  ): Promise<GetMatchedStylesForNodeResponse>;
+  async getMatchedStyles(
+    options?: MatchedStylesOptions & { raw?: false },
+  ): Promise<ParsedCSS>;
+  async getMatchedStyles(
     options: MatchedStylesOptions = {},
   ): Promise<GetMatchedStylesForNodeResponse | ParsedCSS> {
-    return await this.inspector.getMatchedStyles(this, options);
+    return await this.inspector.getMatchedStyles(this, options as any); // FIXME
   }
 
   /**
    * @experimental
    */
   async getComputedStyle(
+    options: ComputedStyleOptions & { raw: true },
+  ): Promise<GetComputedStyleForNodeResponse>;
+  async getComputedStyle(
+    options?: ComputedStyleOptions & { raw?: false },
+  ): Promise<Record<string, string>>;
+  async getComputedStyle(
     options: ComputedStyleOptions = {},
   ): Promise<Record<string, string> | GetComputedStyleForNodeResponse> {
-    return await this.inspector.getComputedStyle(this, options);
+    return await this.inspector.getComputedStyle(this, options as any); // FIXME
   }
 }
 

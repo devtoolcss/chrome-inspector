@@ -552,6 +552,15 @@ export class Inspector extends EventEmitter {
     });
   }
 
+  // Function overloads for getMatchedStyles
+  async getMatchedStyles(
+    element: InspectorElement,
+    options: MatchedStylesOptions & { raw: true },
+  ): Promise<GetMatchedStylesForNodeResponse>;
+  async getMatchedStyles(
+    element: InspectorElement,
+    options?: MatchedStylesOptions & { raw?: false },
+  ): Promise<ParsedCSS>;
   async getMatchedStyles(
     element: InspectorElement,
     options: MatchedStylesOptions = {},
@@ -572,6 +581,15 @@ export class Inspector extends EventEmitter {
     return raw ? ret : parseGetMatchedStylesForNodeResponse(ret, parseOptions);
   }
 
+  // Function overloads for getComputedStyle
+  async getComputedStyle(
+    element: InspectorElement,
+    options: ComputedStyleOptions & { raw: true },
+  ): Promise<GetComputedStyleForNodeResponse>;
+  async getComputedStyle(
+    element: InspectorElement,
+    options?: ComputedStyleOptions & { raw?: false },
+  ): Promise<Record<string, string>>;
   async getComputedStyle(
     element: InspectorElement,
     options: ComputedStyleOptions = {},

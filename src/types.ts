@@ -18,7 +18,7 @@ export type GetMatchedStylesForNodeResponse = {
 };
 
 export type GetComputedStyleForNodeResponse = {
-  computedStyle: Record<string, string>[];
+  computedStyle: { name: string; value: string }[];
   extraFields: Object;
 };
 
