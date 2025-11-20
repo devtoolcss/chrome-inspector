@@ -156,9 +156,7 @@ export class InspectorNode {
 }
 
 export class InspectorElement extends InspectorNode {
-  private get element(): Element {
-    return this._docNode as Element;
-  }
+  declare readonly _docNode: Element;
 
   static get(element: Element): InspectorElement {
     const cached = InspectorElement.nodeMap.get(element);
@@ -173,54 +171,54 @@ export class InspectorElement extends InspectorNode {
   }
 
   get tagName() {
-    return this.element.tagName;
+    return this._docNode.tagName;
   }
 
   get id() {
-    return this.element.id;
+    return this._docNode.id;
   }
 
   get className() {
-    return this.element.className;
+    return this._docNode.className;
   }
 
   get children(): InspectorElement[] {
-    return Array.from(this.element.children).map(InspectorElement.get);
+    return Array.from(this._docNode.children).map(InspectorElement.get);
   }
 
   get attributes(): NamedNodeMap {
-    return this.element.attributes;
+    return this._docNode.attributes;
   }
 
   get classList(): DOMTokenList {
-    return this.element.classList;
+    return this._docNode.classList;
   }
 
   querySelector(selector: string): InspectorElement | null {
-    const el = this.element.querySelector(selector);
+    const el = this._docNode.querySelector(selector);
     return el ? InspectorElement.get(el) : null;
   }
 
   querySelectorAll(selector: string): InspectorElement[] {
-    return Array.from(this.element.querySelectorAll(selector)).map(
+    return Array.from(this._docNode.querySelectorAll(selector)).map(
       InspectorElement.get,
     );
   }
 
   get textContent(): string | null {
-    return this.element.textContent;
+    return this._docNode.textContent;
   }
 
   get innerHTML(): string {
-    return this.element.innerHTML;
+    return this._docNode.innerHTML;
   }
 
   get outerHTML(): string {
-    return this.element.outerHTML;
+    return this._docNode.outerHTML;
   }
 
   get parentNode(): InspectorNode | null {
-    const parent = this.element.parentNode;
+    const parent = this._docNode.parentNode;
     if (!parent) return null;
     return parent instanceof Element
       ? InspectorElement.get(parent)
@@ -228,13 +226,13 @@ export class InspectorElement extends InspectorNode {
   }
 
   get parentElement(): InspectorElement | null {
-    return this.element.parentElement
-      ? InspectorElement.get(this.element.parentElement)
+    return this._docNode.parentElement
+      ? InspectorElement.get(this._docNode.parentElement)
       : null;
   }
 
   get nextSibling(): InspectorNode | null {
-    const next = this.element.nextSibling;
+    const next = this._docNode.nextSibling;
     if (!next) return null;
     return next instanceof Element
       ? InspectorElement.get(next)
@@ -242,13 +240,13 @@ export class InspectorElement extends InspectorNode {
   }
 
   get nextElementSibling(): InspectorElement | null {
-    return this.element.nextElementSibling
-      ? InspectorElement.get(this.element.nextElementSibling)
+    return this._docNode.nextElementSibling
+      ? InspectorElement.get(this._docNode.nextElementSibling)
       : null;
   }
 
   get previousSibling(): InspectorNode | null {
-    const prev = this.element.previousSibling;
+    const prev = this._docNode.previousSibling;
     if (!prev) return null;
     return prev instanceof Element
       ? InspectorElement.get(prev)
@@ -256,13 +254,13 @@ export class InspectorElement extends InspectorNode {
   }
 
   get previousElementSibling(): InspectorElement | null {
-    return this.element.previousElementSibling
-      ? InspectorElement.get(this.element.previousElementSibling)
+    return this._docNode.previousElementSibling
+      ? InspectorElement.get(this._docNode.previousElementSibling)
       : null;
   }
 
   get childNodes(): InspectorNode[] {
-    return Array.from(this.element.childNodes).map((child) =>
+    return Array.from(this._docNode.childNodes).map((child) =>
       child instanceof Element
         ? InspectorElement.get(child)
         : InspectorNode.get(child),
@@ -270,7 +268,7 @@ export class InspectorElement extends InspectorNode {
   }
 
   get firstChild(): InspectorNode | null {
-    const first = this.element.firstChild;
+    const first = this._docNode.firstChild;
     if (!first) return null;
     return first instanceof Element
       ? InspectorElement.get(first)
@@ -278,7 +276,7 @@ export class InspectorElement extends InspectorNode {
   }
 
   get lastChild(): InspectorNode | null {
-    const last = this.element.lastChild;
+    const last = this._docNode.lastChild;
     if (!last) return null;
     return last instanceof Element
       ? InspectorElement.get(last)
@@ -286,15 +284,15 @@ export class InspectorElement extends InspectorNode {
   }
 
   getAttribute(name: string) {
-    return this.element.getAttribute(name);
+    return this._docNode.getAttribute(name);
   }
 
   matches(selector: string): boolean {
-    return this.element.matches(selector);
+    return this._docNode.matches(selector);
   }
 
   closest(selector: string): InspectorElement | null {
-    const el = this.element.closest(selector);
+    const el = this._docNode.closest(selector);
     return el ? InspectorElement.get(el) : null;
   }
 
@@ -355,9 +353,7 @@ export class InspectorElement extends InspectorNode {
 }
 
 export class InspectorDocument extends InspectorNode {
-  private get document(): Document {
-    return this._docNode as Document;
-  }
+  declare readonly _docNode: Document;
 
   static get(document: Document): InspectorDocument {
     const cached = InspectorDocument.nodeMap.get(document);
@@ -380,43 +376,43 @@ export class InspectorDocument extends InspectorNode {
   }
 
   get body(): InspectorElement | null {
-    return this.document.body ? InspectorElement.get(this.document.body) : null;
+    return this._docNode.body ? InspectorElement.get(this._docNode.body) : null;
   }
 
   get head(): InspectorElement | null {
-    return this.document.head ? InspectorElement.get(this.document.head) : null;
+    return this._docNode.head ? InspectorElement.get(this._docNode.head) : null;
   }
 
   get documentElement(): InspectorElement | null {
-    return this.document.documentElement
-      ? InspectorElement.get(this.document.documentElement)
+    return this._docNode.documentElement
+      ? InspectorElement.get(this._docNode.documentElement)
       : null;
   }
 
   querySelector(selector: string): InspectorElement | null {
-    const el = this.document.querySelector(selector);
+    const el = this._docNode.querySelector(selector);
     return el ? InspectorElement.get(el) : null;
   }
 
   querySelectorAll(selector: string): InspectorElement[] {
-    return Array.from(this.document.querySelectorAll(selector)).map(
+    return Array.from(this._docNode.querySelectorAll(selector)).map(
       InspectorElement.get,
     );
   }
 
   getElementById(id: string): InspectorElement | null {
-    const el = this.document.getElementById(id);
+    const el = this._docNode.getElementById(id);
     return el ? InspectorElement.get(el) : null;
   }
 
   getElementsByClassName(className: string): InspectorElement[] {
-    return Array.from(this.document.getElementsByClassName(className)).map(
+    return Array.from(this._docNode.getElementsByClassName(className)).map(
       InspectorElement.get,
     );
   }
 
   getElementsByTagName(tagName: string): InspectorElement[] {
-    return Array.from(this.document.getElementsByTagName(tagName)).map(
+    return Array.from(this._docNode.getElementsByTagName(tagName)).map(
       InspectorElement.get,
     );
   }
@@ -425,9 +421,9 @@ export class InspectorDocument extends InspectorNode {
    * @experimental
    */
   queryXPath(xpath: string): InspectorNode | null {
-    const result = this.document.evaluate(
+    const result = this._docNode.evaluate(
       xpath,
-      this.document,
+      this._docNode,
       this.nsResolver,
       9, //XPathResult.FIRST_ORDERED_NODE_TYPE
       null,
@@ -440,9 +436,9 @@ export class InspectorDocument extends InspectorNode {
    * @experimental
    */
   queryXPathAll(xpath: string): InspectorNode[] {
-    const result = this.document.evaluate(
+    const result = this._docNode.evaluate(
       xpath,
-      this.document,
+      this._docNode,
       this.nsResolver,
       7, //XPathResult.ORDERED_NODE_SNAPSHOT_TYPE
       null,
